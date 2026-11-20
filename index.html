@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#ffffff" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Przepisy" />
+  <title>Moje Przepisy — Baza Posiłków</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body class="bg-stone-50 text-stone-800 min-h-screen antialiased pb-28 safe-pb">
+  <!-- Nagłówek -->
+  <header class="bg-white/95 backdrop-blur border-b border-stone-200 sticky top-0 z-30 safe-top">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 sm:py-4">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-10 h-10 shrink-0 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-sm text-xl" aria-hidden="true">
+            🥗
+          </div>
+          <div class="min-w-0">
+            <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-stone-900 truncate">Moje Przepisy</h1>
+            <p id="headerStats" class="text-xs sm:text-sm text-stone-500 truncate">Ładowanie bazy posiłków…</p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          <button
+            id="offlineStatusBtn"
+            type="button"
+            title="Status trybu offline — stuknij, aby zapisać bazę i zdjęcia w pamięci telefonu"
+            class="hidden inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-stone-200 bg-stone-50 text-stone-700 text-xs font-semibold transition active:scale-95"
+          >
+            <span id="offlineStatusDot" class="w-2 h-2 rounded-full bg-stone-400 shrink-0" aria-hidden="true"></span>
+            <span id="offlineStatusText">Offline…</span>
+          </button>
+
+          <button
+            id="openDayPlanBtn"
+            type="button"
+            class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-stone-900 text-white text-sm font-medium hover:bg-stone-700 active:scale-95 transition shadow-sm"
+          >
+            <span>Plan dnia</span>
+            <span id="dayPlanBadge" class="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-1.5 rounded-lg bg-emerald-500 text-white text-xs font-bold">0</span>
+            <span id="dayPlanKcalHeader" class="hidden sm:inline text-xs text-stone-300 font-normal">0 kcal</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Zakładki kategorii -->
+      <nav id="categoryTabs" class="mt-3.5 flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar" aria-label="Kategorie posiłków">
+        <!-- Generowane dynamicznie -->
+      </nav>
+    </div>
+  </header>
+
+  <!-- Filtry i wyszukiwarka -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6">
+    <!-- Wskazówka instalacji PWA na iPhonie (tylko w Safari przed dodaniem do ekranu) -->
+    <div id="iosInstallBanner" class="hidden mb-4 p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-950 flex items-start justify-between gap-3 shadow-sm">
+      <div class="flex items-start gap-2.5 text-xs sm:text-sm leading-relaxed">
+        <span class="text-lg leading-none mt-0.5 shrink-0" aria-hidden="true">📲</span>
+        <div>
+          <p class="font-semibold text-emerald-900">Zainstaluj jako aplikację na iPhonie</p>
+          <p class="text-emerald-800/90 mt-0.5">
+            Stuknij przycisk <strong>Udostępnij</strong> na pasku Safari, a następnie wybierz <strong>„Do ekranu początkowego”</strong>, aby otwierać przepisy na pełnym ekranie offline.
+          </p>
+        </div>
+      </div>
+      <button
+        id="dismissIosBannerBtn"
+        type="button"
+        aria-label="Ukryj wskazówkę instalacji"
+        class="shrink-0 w-8 h-8 rounded-lg text-emerald-700 hover:bg-emerald-100 flex items-center justify-center text-lg leading-none transition"
+      >
+        &times;
+      </button>
+    </div>
+
+    <section class="bg-white rounded-2xl border border-stone-200 p-4 shadow-sm mb-6">
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+        <!-- Wyszukiwarka -->
+        <div class="md:col-span-6 relative">
+          <svg class="w-5 h-5 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35m0 0A7.5 7.5 0 1 0 6.1 6.1a7.5 7.5 0 0 0 10.55 10.55Z" />
+          </svg>
+          <input
+            id="searchInput"
+            type="search"
+            placeholder="Szukaj po nazwie dania lub składniku (np. kurczak, awokado, skyr)…"
+            class="w-full pl-11 pr-4 py-2.5 rounded-xl border border-stone-200 bg-stone-50 text-base sm:text-sm text-stone-900 placeholder-stone-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition"
+          />
+        </div>
+
+        <!-- Filtr kaloryczności -->
+        <div class="md:col-span-3">
+          <label for="kcalFilter" class="sr-only">Filtr kaloryczności</label>
+          <select
+            id="kcalFilter"
+            class="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 bg-stone-50 text-base sm:text-sm text-stone-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          >
+            <option value="all">Kaloryczność: wszystkie</option>
+            <option value="under600">Poniżej 600 kcal</option>
+            <option value="600to800">600 – 800 kcal</option>
+            <option value="over800">Powyżej 800 kcal</option>
+          </select>
+        </div>
+
+        <!-- Sortowanie -->
+        <div class="md:col-span-3">
+          <label for="sortSelect" class="sr-only">Sortowanie</label>
+          <select
+            id="sortSelect"
+            class="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 bg-stone-50 text-base sm:text-sm text-stone-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          >
+            <option value="alpha">Sortuj: Alfabetycznie (A–Z)</option>
+            <option value="kcal-asc">Sortuj: Kalorie rosnąco</option>
+            <option value="kcal-desc">Sortuj: Kalorie malejąco</option>
+            <option value="protein-desc">Sortuj: Najwięcej białka</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Licznik wyników i reset -->
+      <div class="mt-3 pt-3 border-t border-stone-100 flex flex-wrap items-center justify-between gap-2 text-xs text-stone-500">
+        <span id="resultsCount">Wyświetlono 0 przepisów</span>
+        <div class="flex items-center gap-3">
+          <button id="resetFiltersBtn" type="button" class="hidden text-emerald-700 hover:text-emerald-900 font-medium underline underline-offset-2">
+            Wyczyść filtry
+          </button>
+          <button id="resetAllPortionsBtn" type="button" class="hidden text-stone-500 hover:text-stone-800 font-medium underline underline-offset-2">
+            Resetuj zmienione porcje
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Komunikat błędu -->
+    <div id="errorBanner" class="hidden mb-6 p-4 rounded-2xl bg-red-50 border border-red-200 text-red-800 text-sm"></div>
+
+    <!-- Siatka przepisów -->
+    <section id="recipesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" aria-live="polite">
+      <!-- Generowane dynamicznie -->
+    </section>
+
+    <!-- Brak wyników -->
+    <div id="emptyState" class="hidden text-center py-16 px-4 bg-white rounded-2xl border border-stone-200">
+      <div class="text-4xl mb-3" aria-hidden="true">🔍</div>
+      <h2 class="text-lg font-semibold text-stone-900">Brak pasujących przepisów</h2>
+      <p class="text-sm text-stone-500 mt-1">Spróbuj wpisać inny składnik albo wyczyść aktywne filtry.</p>
+      <button id="emptyResetBtn" type="button" class="mt-4 px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 transition">
+        Pokaż wszystkie przepisy
+      </button>
+    </div>
+  </main>
+
+  <!-- Dolny pasek podsumowania planu dnia (widoczny, gdy w planie jest >= 1 posiłek) -->
+  <div id="dayPlanBar" class="hidden fixed bottom-0 inset-x-0 z-20 bg-stone-900/95 backdrop-blur text-white border-t border-stone-700 shadow-xl safe-bottom">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">
+        <span class="font-semibold text-emerald-400">Plan dnia (<span id="barCount">0</span>)</span>
+        <span class="font-bold text-base"><span id="barKcal">0</span> kcal</span>
+        <span class="text-stone-300 text-xs sm:text-sm">
+          B: <strong id="barProtein" class="text-white">0 g</strong> ·
+          W: <strong id="barCarbs" class="text-white">0 g</strong> ·
+          T: <strong id="barFat" class="text-white">0 g</strong>
+        </span>
+      </div>
+      <button id="barOpenBtn" type="button" class="px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs sm:text-sm font-medium transition">
+        Zobacz plan
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal szczegółów przepisu -->
+  <div id="recipeModal" class="hidden fixed inset-0 z-50 overflow-y-auto overscroll-contain" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div id="modalBackdrop" class="fixed inset-0 bg-stone-950/60 backdrop-blur-sm transition-opacity"></div>
+    <div class="relative min-h-screen flex items-start sm:items-center justify-center p-2 sm:p-6 safe-modal">
+      <div class="relative w-full max-w-4xl bg-white rounded-2xl shadow-2xl border border-stone-200 overflow-hidden my-2 sm:my-4">
+        <!-- Nagłówek modalu -->
+        <div class="px-5 sm:px-7 py-5 border-b border-stone-200 flex items-start justify-between gap-4 bg-stone-50/70">
+          <div class="flex items-center gap-4 min-w-0">
+            <div id="modalImageWrap" class="hidden shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-br from-white via-stone-50 to-amber-50/70 border border-stone-200 p-2 flex items-center justify-center shadow-sm">
+              <img id="modalImage" src="" alt="" class="w-full h-full object-contain drop-shadow" />
+            </div>
+            <div class="min-w-0">
+              <div class="flex flex-wrap items-center gap-2 mb-2">
+                <span id="modalCategoryBadge" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold"></span>
+                <span id="modalTimeRange" class="text-xs text-stone-500"></span>
+                <span id="modalSource" class="text-xs text-stone-400"></span>
+              </div>
+              <h2 id="modalTitle" class="text-xl sm:text-2xl font-bold text-stone-900 leading-snug"></h2>
+            </div>
+          </div>
+          <button
+            id="closeModalBtn"
+            type="button"
+            aria-label="Zamknij przepis"
+            class="shrink-0 w-10 h-10 rounded-xl bg-white border border-stone-200 text-stone-500 hover:text-stone-900 hover:bg-stone-100 flex items-center justify-center transition text-xl leading-none"
+          >
+            &times;
+          </button>
+        </div>
+
+        <!-- Panel porcji i makroskładników -->
+        <div class="px-5 sm:px-7 py-4 bg-white border-b border-stone-200">
+          <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <!-- Kontrolka edycji porcji -->
+            <div>
+              <div class="flex items-center gap-2 mb-2">
+                <span class="text-xs font-semibold uppercase tracking-wider text-stone-500">Liczba porcji</span>
+                <button id="modalResetPortionBtn" type="button" class="hidden text-xs text-emerald-700 hover:text-emerald-900 font-medium underline underline-offset-2">
+                  Przywróć 1 porcję
+                </button>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <div class="inline-flex items-center rounded-xl border border-stone-300 bg-stone-50 overflow-hidden">
+                  <button id="portionMinusBtn" type="button" aria-label="Zmniejsz porcję" class="w-10 h-10 flex items-center justify-center text-lg font-semibold text-stone-700 hover:bg-stone-200 transition">−</button>
+                  <input
+                    id="portionInput"
+                    type="number"
+                    inputmode="decimal"
+                    min="0.25"
+                    max="20"
+                    step="0.25"
+                    value="1"
+                    aria-label="Liczba porcji"
+                    class="w-16 h-10 text-center bg-white border-x border-stone-200 text-base sm:text-sm font-bold text-stone-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-emerald-500"
+                  />
+                  <button id="portionPlusBtn" type="button" aria-label="Zwiększ porcję" class="w-10 h-10 flex items-center justify-center text-lg font-semibold text-stone-700 hover:bg-stone-200 transition">+</button>
+                </div>
+
+                <!-- Szybkie presety porcji -->
+                <div id="portionPresets" class="flex items-center gap-1">
+                  <button type="button" data-portion="0.5" class="portion-preset px-2.5 py-2 rounded-lg text-xs font-semibold border border-stone-200 hover:border-emerald-400 transition">0.5×</button>
+                  <button type="button" data-portion="1" class="portion-preset px-2.5 py-2 rounded-lg text-xs font-semibold border border-stone-200 hover:border-emerald-400 transition">1×</button>
+                  <button type="button" data-portion="1.5" class="portion-preset px-2.5 py-2 rounded-lg text-xs font-semibold border border-stone-200 hover:border-emerald-400 transition">1.5×</button>
+                  <button type="button" data-portion="2" class="portion-preset px-2.5 py-2 rounded-lg text-xs font-semibold border border-stone-200 hover:border-emerald-400 transition">2×</button>
+                  <button type="button" data-portion="3" class="portion-preset px-2.5 py-2 rounded-lg text-xs font-semibold border border-stone-200 hover:border-emerald-400 transition">3×</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Przeliczone makroskładniki -->
+            <div class="grid grid-cols-4 gap-2 sm:gap-3">
+              <div class="px-3 py-2 rounded-xl bg-amber-50 border border-amber-200 text-center">
+                <div id="modalKcal" class="text-lg sm:text-xl font-extrabold text-amber-900">0</div>
+                <div class="text-[11px] font-medium text-amber-700 uppercase">Kcal</div>
+              </div>
+              <div class="px-3 py-2 rounded-xl bg-rose-50 border border-rose-200 text-center">
+                <div id="modalProtein" class="text-lg sm:text-xl font-bold text-rose-900">0 g</div>
+                <div class="text-[11px] font-medium text-rose-700 uppercase">Białko</div>
+              </div>
+              <div class="px-3 py-2 rounded-xl bg-sky-50 border border-sky-200 text-center">
+                <div id="modalCarbs" class="text-lg sm:text-xl font-bold text-sky-900">0 g</div>
+                <div class="text-[11px] font-medium text-sky-700 uppercase">Węgle</div>
+              </div>
+              <div class="px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-center">
+                <div id="modalFat" class="text-lg sm:text-xl font-bold text-emerald-900">0 g</div>
+                <div class="text-[11px] font-medium text-emerald-700 uppercase">Tłuszcze</div>
+              </div>
+            </div>
+          </div>
+          <p id="modalBaseNote" class="hidden mt-2 text-xs text-stone-500"></p>
+        </div>
+
+        <!-- Treść przepisu: składniki + kroki -->
+        <div class="px-5 sm:px-7 py-6 grid grid-cols-1 md:grid-cols-12 gap-6 max-h-[60dvh] sm:max-h-[65vh] overflow-y-auto overscroll-contain">
+          <!-- Składniki -->
+          <div class="md:col-span-5">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-sm font-bold uppercase tracking-wider text-stone-700">Składniki</h3>
+              <button id="copyIngredientsBtn" type="button" class="text-xs font-medium text-emerald-700 hover:text-emerald-900 inline-flex items-center gap-1">
+                <span>Kopiuj listę</span>
+              </button>
+            </div>
+            <ul id="modalIngredients" class="space-y-2 text-sm">
+              <!-- Generowane dynamicznie -->
+            </ul>
+          </div>
+
+          <!-- Przygotowanie -->
+          <div class="md:col-span-7 md:border-l md:border-stone-200 md:pl-6">
+            <h3 class="text-sm font-bold uppercase tracking-wider text-stone-700 mb-3">Przygotowanie</h3>
+            <ol id="modalSteps" class="space-y-3 text-sm leading-relaxed text-stone-700">
+              <!-- Generowane dynamicznie -->
+            </ol>
+          </div>
+        </div>
+
+        <!-- Stopka modalu -->
+        <div class="px-5 sm:px-7 py-4 bg-stone-50 border-t border-stone-200 flex flex-wrap items-center justify-between gap-3">
+          <button
+            id="modalAddToPlanBtn"
+            type="button"
+            class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-sm font-semibold transition shadow-sm"
+          >
+            + Dodaj do planu dnia
+          </button>
+          <button
+            id="closeModalFooterBtn"
+            type="button"
+            class="px-4 py-2.5 rounded-xl bg-white border border-stone-300 hover:bg-stone-100 text-stone-700 text-sm font-medium transition"
+          >
+            Zamknij
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Szuflada: Plan dnia -->
+  <div id="dayPlanDrawer" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="dayPlanTitle">
+    <div id="dayPlanBackdrop" class="fixed inset-0 bg-stone-950/50 backdrop-blur-sm"></div>
+    <aside class="fixed right-0 top-0 bottom-0 w-full max-w-md bg-white shadow-2xl border-l border-stone-200 flex flex-col">
+      <div class="px-5 py-4 border-b border-stone-200 flex items-center justify-between bg-stone-50 safe-top">
+        <div>
+          <h2 id="dayPlanTitle" class="text-lg font-bold text-stone-900">Plan dnia</h2>
+          <p class="text-xs text-stone-500">Suma kalorii i makro dla wybranych posiłków</p>
+        </div>
+        <button id="closeDayPlanBtn" type="button" aria-label="Zamknij plan dnia" class="w-10 h-10 rounded-xl bg-white border border-stone-200 text-stone-500 hover:text-stone-900 flex items-center justify-center text-xl">&times;</button>
+      </div>
+
+      <!-- Suma dzienna -->
+      <div class="p-4 border-b border-stone-200 grid grid-cols-4 gap-2 bg-white">
+        <div class="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-center">
+          <div id="drawerKcal" class="text-base font-extrabold text-amber-900">0</div>
+          <div class="text-[10px] font-semibold text-amber-700 uppercase">Kcal</div>
+        </div>
+        <div class="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-center">
+          <div id="drawerProtein" class="text-base font-bold text-rose-900">0 g</div>
+          <div class="text-[10px] font-semibold text-rose-700 uppercase">Białko</div>
+        </div>
+        <div class="p-2.5 rounded-xl bg-sky-50 border border-sky-200 text-center">
+          <div id="drawerCarbs" class="text-base font-bold text-sky-900">0 g</div>
+          <div class="text-[10px] font-semibold text-sky-700 uppercase">Węgle</div>
+        </div>
+        <div class="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-center">
+          <div id="drawerFat" class="text-base font-bold text-emerald-900">0 g</div>
+          <div class="text-[10px] font-semibold text-emerald-700 uppercase">Tłuszcze</div>
+        </div>
+      </div>
+
+      <!-- Lista posiłków w planie -->
+      <div id="dayPlanList" class="flex-1 overflow-y-auto overscroll-contain p-4 space-y-3">
+        <!-- Generowane dynamicznie -->
+      </div>
+
+      <div class="p-4 border-t border-stone-200 bg-stone-50 flex items-center justify-between gap-2 safe-bottom">
+        <button id="clearDayPlanBtn" type="button" class="text-xs font-medium text-red-600 hover:text-red-800 underline underline-offset-2">
+          Wyczyść plan
+        </button>
+        <button id="closeDayPlanFooterBtn" type="button" class="px-4 py-2.5 rounded-xl bg-stone-900 text-white text-sm font-medium hover:bg-stone-700 transition">
+          Gotowe
+        </button>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Fallback JSON dla bezpośredniego otwarcia z dysku (file://) -->
+  <script src="./data/recipes.js"></script>
+  <!-- Główna logika aplikacji -->
+  <script src="./app.js"></script>
+</body>
+</html>
